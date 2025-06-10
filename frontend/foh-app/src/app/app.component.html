@@ -1,0 +1,13 @@
+<mat-toolbar color="primary">
+  <span>FOH App</span>
+  <span class="spacer"></span>
+  <button mat-button routerLink="/ventas" routerLinkActive="active">Ventas</button>
+</mat-toolbar>
+
+<main class="app-main">
+  <router-outlet></router-outlet>
+</main>
+
+<mat-toolbar color="accent" class="footer-toolbar">
+  <span>&copy; {{ currentYear() }} FOH FullStack</span>
+</mat-toolbar>

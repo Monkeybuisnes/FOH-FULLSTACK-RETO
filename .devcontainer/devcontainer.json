@@ -1,0 +1,62 @@
+{
+  "name": "FullStack FOH",
+  "image": "mcr.microsoft.com/devcontainers/java:0-17",
+  "features": {
+    "docker-in-docker": "latest",
+    "node": "latest"
+  },
+  "forwardPorts": [4200, 8080],
+  "postCreateCommand": "npm install -g @angular/cli@latest && mvn -q verify"
+}
+
+docker-compose.yml:
+version: '3.8'
+
+services:
+  oracle-db:
+    image: gvenzl/oracle-xe:23.3.0
+    container_name: oracle-xe
+    environment:
+      ORACLE_PASSWORD: admin
+      ORACLE_DATABASE: ORCLCDB
+    ports:
+      - "1521:1521"
+      - "5500:5500"
+    volumes:
+      - oracle-data:/opt/oracle/oradata
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: foh-backend
+    depends_on:
+      - oracle-db
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:oracle:thin:@//oracle-xe:1521/ORCLCDB
+      SPRING_DATASOURCE_USERNAME: system
+      SPRING_DATASOURCE_PASSWORD: admin
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+    ports:
+      - "8080:8080"
+    networks:
+      - foh-network
+
+  frontend:
+    build:
+      context: ./frontend/foh-app
+      dockerfile: Dockerfile
+    container_name: foh-frontend
+    depends_on:
+      - backend
+    ports:
+      - "4200:4200"
+    networks:
+      - foh-network
+
+volumes:
+  oracle-data:
+
+networks:
+  foh-network:
+    driver: bridge

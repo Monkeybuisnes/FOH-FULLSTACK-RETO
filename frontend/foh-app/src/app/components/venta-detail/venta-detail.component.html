@@ -1,0 +1,53 @@
+<mat-card class="venta-detail-card" *ngIf="!loading; else loadingTpl">
+  <mat-card-header>
+    <mat-card-title>Detalle de Venta #{{ venta?.id }}</mat-card-title>
+  </mat-card-header>
+  <mat-card-content *ngIf="venta; else errorTpl">
+    <p><strong>Cliente ID:</strong> {{ venta.clienteId }}</p>
+    <p><strong>Fecha:</strong> {{ venta.fecha | date:'full' }}</p>
+
+    <h3>Items</h3>
+    <table mat-table [dataSource]="dataSource" class="mat-elevation-z8">
+      <!-- Producto ID -->
+      <ng-container matColumnDef="productoId">
+        <th mat-header-cell *matHeaderCellDef>Producto ID</th>
+        <td mat-cell *matCellDef="let row">{{ row.productoId }}</td>
+      </ng-container>
+      <!-- Cantidad -->
+      <ng-container matColumnDef="cantidad">
+        <th mat-header-cell *matHeaderCellDef>Cantidad</th>
+        <td mat-cell *matCellDef="let row">{{ row.cantidad }}</td>
+      </ng-container>
+      <!-- Precio Unitario -->
+      <ng-container matColumnDef="precioUnitario">
+        <th mat-header-cell *matHeaderCellDef>Precio Unitario</th>
+        <td mat-cell *matCellDef="let row">{{ row.precioUnitario | currency }}</td>
+      </ng-container>
+      <!-- Subtotal -->
+      <ng-container matColumnDef="subtotal">
+        <th mat-header-cell *matHeaderCellDef>Subtotal</th>
+        <td mat-cell *matCellDef="let row">{{ row.subtotal | currency }}</td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+    </table>
+
+    <div class="total">
+      <strong>Total:</strong> {{ getTotal() | currency }}
+    </div>
+  </mat-card-content>
+  <mat-card-actions>
+    <button mat-raised-button color="primary" (click)="volver()">Volver</button>
+  </mat-card-actions>
+</mat-card>
+
+<ng-template #loadingTpl>
+  <div class="loading-container">
+    <mat-progress-spinner mode="indeterminate"></mat-progress-spinner>
+  </div>
+</ng-template>
+
+<ng-template #errorTpl>
+  <div class="error">{{ error }}</div>
+</ng-template>

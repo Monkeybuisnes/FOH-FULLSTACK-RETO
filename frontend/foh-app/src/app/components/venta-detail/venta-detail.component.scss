@@ -1,0 +1,29 @@
+.venta-detail-card {
+  max-width: 800px;
+  margin: 1rem auto;
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
+.error {
+  color: #f44336;
+  margin: 1rem 0;
+}
+
+.total {
+  margin-top: 1rem;
+  font-size: 1.2rem;
+}
+
+table {
+  width: 100%;
+  margin-top: 1rem;
+
+  th.mat-header-cell, td.mat-cell {
+    padding: 8px;
+  }
+}

@@ -1,0 +1,513 @@
+github project repo and username:
+https://github.com/Monkeybuisnes/foh-fullstack-reto.git
+
+.devcontainer/devcontainer.json:
+{
+  "name": "FullStack FOH",
+  "image": "mcr.microsoft.com/devcontainers/java:0-17",
+  "features": {
+    "docker-in-docker": "latest",
+    "node": "latest"
+  },
+  "forwardPorts": [4200, 8080],
+  "postCreateCommand": "npm install -g @angular/cli@latest && mvn -q verify"
+}
+
+docker-compose.yml:
+version: '3.8'
+
+services:
+  oracle-db:
+    image: gvenzl/oracle-xe:23.3.0
+    container_name: oracle-xe
+    environment:
+      ORACLE_PASSWORD: admin
+      ORACLE_DATABASE: ORCLCDB
+    ports:
+      - "1521:1521"
+      - "5500:5500"
+    volumes:
+      - oracle-data:/opt/oracle/oradata
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: foh-backend
+    depends_on:
+      - oracle-db
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:oracle:thin:@//oracle-xe:1521/ORCLCDB
+      SPRING_DATASOURCE_USERNAME: system
+      SPRING_DATASOURCE_PASSWORD: admin
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+    ports:
+      - "8080:8080"
+    networks:
+      - foh-network
+
+  frontend:
+    build:
+      context: ./frontend/foh-app
+      dockerfile: Dockerfile
+    container_name: foh-frontend
+    depends_on:
+      - backend
+    ports:
+      - "4200:4200"
+    networks:
+      - foh-network
+
+volumes:
+  oracle-data:
+
+networks:
+  foh-network:
+    driver: bridge
+
+pom.xml:
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>3.5.0</version>
+		<relativePath/> <!-- lookup parent from repository -->
+	</parent>
+	<groupId>com.empresa</groupId>
+	<artifactId>foh-backend</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<name>foh-backend</name>
+	<description>Backend de microservicios para reto FOH</description>
+	<url/>
+	<licenses>
+		<license/>
+	</licenses>
+	<developers>
+		<developer/>
+	</developers>
+	<scm>
+		<connection/>
+		<developerConnection/>
+		<tag/>
+		<url/>
+	</scm>
+	<properties>
+		<java.version>17</java.version>
+	</properties>
+	<dependencies>
+ 	<!-- JPA, Web y DevTools -->
+	  <dependency>
+	    <groupId>org.springframework.boot</groupId>
+	    <artifactId>spring-boot-starter-data-jpa</artifactId>
+	  </dependency>	
+	  <dependency>
+	    <groupId>org.springframework.boot</groupId>
+	    <artifactId>spring-boot-starter-web</artifactId>
+	  </dependency>
+	  <dependency>
+	    <groupId>org.springframework.boot</groupId>
+	    <artifactId>spring-boot-devtools</artifactId>
+	    <scope>runtime</scope>
+	    <optional>true</optional>
+	  </dependency>
+	  <!-- Oracle JDBC -->
+	  <dependency>
+	    <groupId>com.oracle.database.jdbc</groupId>
+	    <artifactId>ojdbc11</artifactId>
+	    <scope>runtime</scope>
+	  </dependency>
+	  <!-- Lombok -->
+	  <dependency>
+	    <groupId>org.projectlombok</groupId>
+	    <artifactId>lombok</artifactId>
+	    <optional>true</optional>
+	  </dependency>
+	  <!-- Swagger/OpenAPI UI -->
+	  <dependency>
+	    <groupId>org.springdoc</groupId>
+	    <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+	    <version>2.1.0</version>
+	  </dependency>
+	  <!-- Tests -->
+	  <dependency>
+	    <groupId>org.springframework.boot</groupId>
+	    <artifactId>spring-boot-starter-test</artifactId>
+	    <scope>test</scope>
+	  </dependency>
+	</dependencies>
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<annotationProcessorPaths>
+						<path>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+						</path>
+					</annotationProcessorPaths>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+				<configuration>
+					<excludes>
+						<exclude>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+						</exclude>
+					</excludes>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+
+</project>
+
+Backend Structure:
+// Estructura base de microservicio FOH - Java Spring Boot
+// Paquete: com.empresa.foh
+
+// ============ ENTIDADES ============
+// Cliente.java
+package com.empresa.foh.entity;
+
+import jakarta.persistence.*;
+import lombok.*;
+
+@Entity
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class Cliente {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false)
+    private String nombre;
+
+    @Column(nullable = false, unique = true)
+    private String email;
+}
+
+// Producto.java
+package com.empresa.foh.entity;
+
+import jakarta.persistence.*;
+import lombok.*;
+
+@Entity
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class Producto {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false)
+    private String nombre;
+
+    @Column(nullable = false)
+    private Double precio;
+
+    @Column(nullable = false)
+    private Integer stock;
+}
+
+// Venta.java
+package com.empresa.foh.entity;
+
+import jakarta.persistence.*;
+import lombok.*;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Entity
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class Venta {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(optional = false)
+    private Cliente cliente;
+
+    @Column(nullable = false)
+    private LocalDateTime fecha;
+
+    @OneToMany(mappedBy = "venta", cascade = CascadeType.ALL)
+    private List<VentaItem> items;
+}
+
+// VentaItem.java
+package com.empresa.foh.entity;
+
+import jakarta.persistence.*;
+import lombok.*;
+
+@Entity
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class VentaItem {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(optional = false)
+    private Venta venta;
+
+    @ManyToOne(optional = false)
+    private Producto producto;
+
+    @Column(nullable = false)
+    private Integer cantidad;
+
+    @Column(nullable = false)
+    private Double subtotal;
+}
+
+// ============ DTOs ============
+
+// ClienteDTO.java
+package com.empresa.foh.dto;
+
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import lombok.Data;
+
+@Data
+public class ClienteDTO {
+    private Long id;
+
+    @NotBlank(message = "Nombre es obligatorio")
+    private String nombre;
+
+    @NotBlank(message = "Email es obligatorio")
+    @Email(message = "Formato de email inválido")
+    private String email;
+}
+
+// ProductoDTO.java
+package com.empresa.foh.dto;
+
+import jakarta.validation.constraints.*;
+import lombok.Data;
+
+@Data
+public class ProductoDTO {
+    private Long id;
+
+    @NotBlank
+    private String nombre;
+
+    @NotNull @Positive
+    private Double precio;
+
+    @NotNull @Min(0)
+    private Integer stock;
+}
+
+// VentaDTO.java
+package com.empresa.foh.dto;
+
+import jakarta.validation.constraints.*;
+import lombok.Data;
+
+import java.util.List;
+
+@Data
+public class VentaDTO {
+    private Long clienteId;
+
+    @NotNull
+    private List<ItemDTO> items;
+
+    @Data
+    public static class ItemDTO {
+        @NotNull
+        private Long productoId;
+
+        @NotNull @Min(1)
+        private Integer cantidad;
+    }
+}
+
+// ============ MANEJO DE ERRORES ============
+
+// GlobalExceptionHandler.java
+package com.empresa.foh.controller;
+
+import jakarta.validation.ConstraintViolationException;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import java.util.HashMap;
+import java.util.Map;
+
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<?> handleValidation(MethodArgumentNotValidException ex) {
+        Map<String, String> errors = new HashMap<>();
+        ex.getBindingResult().getFieldErrors().forEach(e -> errors.put(e.getField(), e.getDefaultMessage()));
+        return ResponseEntity.badRequest().body(errors);
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<?> handleConstraint(ConstraintViolationException ex) {
+        return ResponseEntity.badRequest().body(ex.getMessage());
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<?> handleOthers(Exception ex) {
+        return ResponseEntity.internalServerError().body("Error interno: " + ex.getMessage());
+    }
+}
+
+// ============ DOCUMENTACIÓN OPENAPI ============
+
+// En application.yml agregar:
+// springdoc:
+//   api-docs:
+//     path: /v3/api-docs
+//   swagger-ui:
+//     path: /swagger-ui.html
+
+// Acceder a la documentación en:
+// http://localhost:8080/swagger-ui.html
+
+
+application.properties:
+# Nombre de la aplicación
+spring.application.name=foh-backend
+
+# Datasource Oracle
+spring.datasource.url=jdbc:oracle:thin:@//localhost:1521/ORCLCDB
+spring.datasource.username=admin
+spring.datasource.password=admin
+spring.datasource.driver-class-name=oracle.jdbc.OracleDriver
+
+# JPA / Hibernate
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+
+# Puerto del servidor
+server.port=8080
+
+# SpringDoc / Swagger
+springdoc.api-docs.path=/v3/api-docs
+springdoc.swagger-ui.path=/swagger-ui.html
+
+
+Script de Base de Datos:
+INSERT INTO cliente (id, nombre, email) VALUES (1, 'Juan Pérez', 'juan@correo.com');
+-- etc.
+
+
+project structure:
+reto-foh-fullstack/
+├── .devcontainer/
+│   ├── devcontainer.json          # Configuración de GitHub Codespaces
+│   └── Dockerfile                 # (Opcional) Personalización de entorno
+│
+├── backend/
+│   ├── pom.xml                    # Dependencias y build de Maven
+│   ├── mvnw                       # Wrapper de Maven (Linux/Mac)
+│   ├── mvnw.cmd                   # Wrapper de Maven (Windows)
+│   ├── src/
+│   │   ├── main/
+│   │   │   ├── java/
+│   │   │   │   └── com/tuempresa/foh/
+│   │   │   │       ├── controller/
+│   │   │   │       │   ├── ClienteController.java
+│   │   │   │       │   ├── ProductoController.java
+│   │   │   │       │   └── VentaController.java
+│   │   │   │       ├── dto/
+│   │   │   │       ├── entity/
+│   │   │   │       │   ├── Cliente.java
+│   │   │   │       │   ├── Producto.java
+│   │   │   │       │   ├── Venta.java
+│   │   │   │       │   └── VentaItem.java
+│   │   │   │       ├── repository/
+│   │   │   │       │   ├── ClienteRepository.java
+│   │   │   │       │   ├── ProductoRepository.java
+│   │   │   │       │   └── VentaRepository.java
+│   │   │   │       └── service/
+│   │   │   │           ├── ClienteService.java
+│   │   │   │           ├── ProductoService.java
+│   │   │   │           └── VentaService.java
+│   │   │   └── resources/
+│   │   │       ├── application.yml    # Configuración Spring Boot
+│   │   │       ├── db/
+│   │   │       │   └── init-data.sql  # Script de datos de prueba
+│   │   │       └── static/
+│   │   │           └── swagger-ui/    # Archivos Swagger UI (si no se sirve desde dependencia)
+│   │   └── test/
+│   │       └── java/…                  # Tests unitarios / integración
+│   └── README.md                   # Cómo arrancar el back-end
+│
+├── frontend/
+│   ├── foh-app/
+│   │   ├── angular.json
+│   │   ├── package.json
+│   │   ├── tsconfig.json
+│   │   ├── src/
+│   │   │   ├── app/
+│   │   │   │   ├── components/
+│   │   │   │   │   ├── ventas-list/
+│   │   │   │   │   │   ├── ventas-list.component.ts
+│   │   │   │   │   │   ├── ventas-list.component.html
+│   │   │   │   │   │   └── ventas-list.component.scss
+│   │   │   │   │   └── venta-detail/
+│   │   │   │   │       ├── venta-detail.component.ts
+│   │   │   │   │       ├── venta-detail.component.html
+│   │   │   │   │       └── venta-detail.component.scss
+│   │   │   │   ├── models/
+│   │   │   │   │   ├── cliente.model.ts
+│   │   │   │   │   ├── producto.model.ts
+│   │   │   │   │   └── venta.model.ts
+│   │   │   │   ├── services/
+│   │   │   │   │   └── venta.service.ts
+│   │   │   │   └── app-routing.module.ts
+│   │   │   ├── assets/
+│   │   │   └── styles/               # SCSS globales
+│   │   └── README.md                 # Cómo arrancar el front-end
+│   └── .gitignore
+│
+├── docker-compose.yml                # (Opcional) Orquestación con Oracle DB + App
+├── .gitignore
+├── README.md                         # Visión general, instrucciones de despliegue
+└── LICENSE                           # Licencia del proyecto (MIT, Apache, etc.)
+
+app-routing.module.ts:
+{ path: 'ventas', component: VentasListComponent },
+{ path: 'ventas/:id', component: VentaDetailComponent },
+{ path: '', redirectTo: 'ventas', pathMatch: 'full' }
+
+
+Integración y pruebas
+# Back-End
+cd backend && mvn spring-boot:run
+
+# Front-End
+cd frontend/foh-app && ng serve --open
+
+
+entrega:
+git add .
+git commit -m "feat: implementación inicial back y front"
+git push origin main
